@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Biztory — Blueprint Gap Scanner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --navy: #00375A;
+      --navy-dark: #001E33;
+      --blue: #006EFF;
+      --blue-hover: #0056CC;
+      --lime: #64FA8C;
+      --purple: #8162FC;
+      --bg: #FAFAFB;
+      --card: #FFFFFF;
+      --border: #E6E8EC;
+      --muted: #6B7280;
+      --text: #1F2937;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      font-family: 'Be Vietnam Pro', system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+
+    /* Header */
+    header {
+      background: var(--navy);
+      color: white;
+      padding: 18px 48px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .logo {
+      font-weight: 800;
+      font-size: 22px;
+      letter-spacing: -0.02em;
+    }
+    .logo span { color: var(--lime); }
+    nav ul {
+      display: flex;
+      list-style: none;
+      gap: 32px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+    nav a { opacity: 0.85; transition: opacity 0.15s; }
+    nav a:hover { opacity: 1; }
+
+    /* Hero */
+    .hero {
+      background: linear-gradient(135deg, var(--navy) 0%, var(--navy-dark) 100%);
+      color: white;
+      padding: 64px 48px 48px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: 0; right: 0;
+      width: 50%;
+      height: 100%;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+      background-size: 24px 24px;
+      pointer-events: none;
+    }
+    .hero h1 {
+      font-size: 48px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      max-width: 800px;
+      line-height: 1.1;
+      margin-bottom: 16px;
+      position: relative;
+    }
+    .hero h1 .accent { color: var(--lime); }
+    .hero .subtitle {
+      font-size: 18px;
+      font-weight: 400;
+      opacity: 0.85;
+      max-width: 640px;
+      position: relative;
+    }
+    .hero-badge {
+      display: inline-block;
+      background: rgba(100, 250, 140, 0.15);
+      color: var(--lime);
+      padding: 6px 14px;
+      border-radius: 24px;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 24px;
+      position: relative;
+      border: 1px solid rgba(100, 250, 140, 0.3);
+    }
+
+    /* Main app */
+    main {
+      max-width: 1400px;
+      margin: -32px auto 64px;
+      padding: 0 48px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 32px;
+      position: relative;
+      z-index: 10;
+    }
+    @media (max-width: 960px) {
+      main { grid-template-columns: 1fr; }
+    }
+
+    /* Conversation panel */
+    .conv-panel {
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0, 55, 90, 0.08);
+      display: flex;
+      flex-direction: column;
+      min-height: 640px;
+      max-height: 80vh;
+      overflow: hidden;
+    }
+    .conv-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .conv-header .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--lime);
+      box-shadow: 0 0 8px var(--lime);
+    }
+    .conv-header .title {
+      font-weight: 600;
+      font-size: 14px;
+    }
+    .conv-header .meta {
+      margin-left: auto;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .conv-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .msg {
+      max-width: 88%;
+      padding: 12px 16px;
+      border-radius: 12px;
+      font-size: 14.5px;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .msg.agent {
+      background: #F3F5F9;
+      color: var(--text);
+      align-self: flex-start;
+      border-bottom-left-radius: 4px;
+    }
+    .msg.user {
+      background: var(--blue);
+      color: white;
+      align-self: flex-end;
+      border-bottom-right-radius: 4px;
+    }
+    .msg.thinking {
+      align-self: flex-start;
+      color: var(--muted);
+      font-style: italic;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .thinking .pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--blue);
+      animation: pulse 1s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1.2); }
+    }
+    .conv-input {
+      padding: 16px 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 12px;
+    }
+    .conv-input textarea {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 14.5px;
+      resize: none;
+      min-height: 44px;
+      max-height: 120px;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .conv-input textarea:focus { border-color: var(--blue); }
+    .conv-input button {
+      background: var(--navy);
+      color: white;
+      border: none;
+      padding: 0 20px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.15s;
+      font-family: inherit;
+    }
+    .conv-input button:hover { background: var(--blue); }
+    .conv-input button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* Artifact panel */
+    .artifact-panel {
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0, 55, 90, 0.08);
+      min-height: 640px;
+      padding: 28px 32px;
+      position: relative;
+    }
+    .artifact-empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--muted);
+      text-align: center;
+      padding: 48px;
+    }
+    .artifact-empty .icon {
+      font-size: 48px;
+      opacity: 0.3;
+      margin-bottom: 16px;
+    }
+    .artifact-empty .title { font-size: 16px; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+    .artifact-empty .desc { font-size: 14px; max-width: 320px; }
+
+    .artifact-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .artifact-title {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--navy);
+      margin-bottom: 24px;
+      letter-spacing: -0.02em;
+    }
+
+    .section { margin-bottom: 24px; }
+    .section + .section { padding-top: 24px; border-top: 1px solid var(--border); }
+
+    .situation-card {
+      background: #F3F5F9;
+      border-radius: 10px;
+      padding: 14px 16px;
+      font-size: 14px;
+      line-height: 1.5;
+      margin-bottom: 14px;
+      border-left: 3px solid var(--blue);
+    }
+    .meta-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px 16px;
+      font-size: 13px;
+    }
+    .meta-grid div { display: flex; gap: 6px; }
+    .meta-grid .key { color: var(--muted); font-weight: 500; }
+
+    /* Radar chart container */
+    .chart-wrap {
+      height: 240px;
+      position: relative;
+      margin: 8px 0 16px;
+    }
+    .scores-list { font-size: 13px; display: grid; grid-template-columns: 1fr auto; row-gap: 6px; column-gap: 8px; }
+    .scores-list .dim { font-weight: 500; }
+    .scores-list .dim.gap { color: var(--purple); font-weight: 700; }
+    .scores-list .gap-marker { color: var(--purple); font-size: 11px; font-weight: 700; }
+
+    .recommendation {
+      background: linear-gradient(135deg, rgba(0,110,255,0.06), rgba(100,250,140,0.06));
+      border-radius: 10px;
+      padding: 16px 18px;
+      border: 1px solid rgba(0,110,255,0.12);
+    }
+    .recommendation .rec-pill {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      background: var(--navy);
+      color: white;
+      padding: 4px 10px;
+      border-radius: 12px;
+      margin-bottom: 10px;
+    }
+    .recommendation h3 {
+      font-size: 17px;
+      color: var(--navy);
+      margin-bottom: 4px;
+      font-weight: 700;
+    }
+    .recommendation .duration { font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+    .recommendation .why { font-size: 13.5px; line-height: 1.5; }
+
+    .consultant-card {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      background: #F3F5F9;
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .consultant-card .avatar {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--navy), var(--blue));
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    .consultant-card .name { font-weight: 700; font-size: 15px; color: var(--navy); }
+    .consultant-card .role { font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+    .consultant-card .note { font-size: 12.5px; color: var(--muted); line-height: 1.4; }
+
+    .cta-block {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .email-row {
+      display: flex;
+      gap: 8px;
+    }
+    .email-row input {
+      flex: 1;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+    }
+    .email-row input:focus { border-color: var(--blue); }
+    .email-row button {
+      background: var(--blue);
+      color: white;
+      border: none;
+      padding: 0 18px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .email-row button:hover { background: var(--blue-hover); }
+    .book-btn {
+      background: var(--navy);
+      color: white;
+      border: none;
+      padding: 14px 18px;
+      border-radius: 8px;
+      font-family: inherit;
+      font-weight: 600;
+      font-size: 14.5px;
+      cursor: pointer;
+      text-align: center;
+      transition: background 0.15s;
+    }
+    .book-btn:hover { background: var(--blue); }
+    .email-status {
+      font-size: 13px;
+      color: var(--lime);
+      font-weight: 500;
+      padding: 8px 0;
+    }
+
+    footer {
+      text-align: center;
+      padding: 32px 24px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">Bizt<span>·</span>ory</div>
+    <nav>
+      <ul>
+        <li><a href="#">Strategy</a></li>
+        <li><a href="#">Activation</a></li>
+        <li><a href="#">Technology</a></li>
+        <li><a href="#">Operate</a></li>
+        <li><a href="#">Blueprint</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <section class="hero">
+    <div class="hero-badge">● Live agentic experience</div>
+    <h1>Scan your data + AI maturity in <span class="accent">5 minutes.</span></h1>
+    <p class="subtitle">Our Blueprint Gap Scanner is a working Biztory agent. Describe your situation; it diagnoses the gaps and recommends where to start. No sign-up, no sales call to start.</p>
+  </section>
+
+  <main>
+    <!-- Conversation panel -->
+    <div class="conv-panel">
+      <div class="conv-header">
+        <div class="dot"></div>
+        <div class="title">Blueprint Gap Scanner</div>
+        <div class="meta" id="turn-counter">Turn 1 of ~7</div>
+      </div>
+      <div class="conv-messages" id="messages">
+        <div class="msg agent">Tell me about your data situation in one or two sentences. I'll scan it against the Biztory Blueprint and recommend where to start.</div>
+      </div>
+      <div class="conv-input">
+        <textarea id="user-input" placeholder="Type your answer..." rows="1"></textarea>
+        <button id="send-btn">Send</button>
+      </div>
+    </div>
+
+    <!-- Artifact panel -->
+    <div class="artifact-panel" id="artifact-panel">
+      <div class="artifact-empty" id="artifact-empty">
+        <div class="icon">◐</div>
+        <div class="title">Your Blueprint diagnosis will appear here</div>
+        <div class="desc">As we talk, this panel populates with your maturity scan, the largest gaps, and a recommended next step.</div>
+      </div>
+
+      <div id="artifact-content" style="display:none;">
+        <div class="artifact-label">Biztory Blueprint Diagnosis</div>
+        <div class="artifact-title">Your maturity scan</div>
+
+        <div class="section" id="situation-section" style="display:none;">
+          <div class="situation-card" id="situation-summary"></div>
+          <div class="meta-grid" id="meta-grid"></div>
+        </div>
+
+        <div class="section" id="scores-section" style="display:none;">
+          <div class="artifact-label" style="margin-bottom:12px;">Maturity scan (1–5)</div>
+          <div class="chart-wrap"><canvas id="radar-chart"></canvas></div>
+          <div class="scores-list" id="scores-list"></div>
+        </div>
+
+        <div class="section" id="rec-section" style="display:none;">
+          <div class="recommendation">
+            <div class="rec-pill" id="rec-pill">Recommended next step</div>
+            <h3 id="rec-title"></h3>
+            <div class="duration" id="rec-duration"></div>
+            <div class="why" id="rec-why"></div>
+          </div>
+        </div>
+
+        <div class="section" id="consultant-section" style="display:none;">
+          <div class="artifact-label" style="margin-bottom:10px;">Your match</div>
+          <div class="consultant-card">
+            <div class="avatar" id="consultant-initials">TV</div>
+            <div>
+              <div class="name" id="consultant-name"></div>
+              <div class="role" id="consultant-role"></div>
+              <div class="note" id="consultant-note"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section" id="cta-section" style="display:none;">
+          <div class="cta-block">
+            <div class="email-row">
+              <input type="email" id="email-input" placeholder="your.email@company.com" />
+              <button id="email-btn">Email me</button>
+            </div>
+            <div class="email-status" id="email-status" style="display:none;"></div>
+            <button class="book-btn" id="book-btn">Book a 30-min scoping call →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    Biztory · Blueprint Gap Scanner · v0 demo · Powered by Claude
+  </footer>
+
+  <script>
+    const sessionId = 'sess_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    let conversationHistory = [];
+    let radarChart = null;
+    let artifactState = {};
+
+    const messagesEl = document.getElementById('messages');
+    const inputEl = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+    const turnCounter = document.getElementById('turn-counter');
+    const artifactEmpty = document.getElementById('artifact-empty');
+    const artifactContent = document.getElementById('artifact-content');
+
+    // Auto-resize textarea
+    inputEl.addEventListener('input', () => {
+      inputEl.style.height = 'auto';
+      inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
+    });
+
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        send();
+      }
+    });
+
+    sendBtn.addEventListener('click', send);
+
+    function addMessage(text, role) {
+      const div = document.createElement('div');
+      div.className = 'msg ' + role;
+      div.textContent = text;
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function addThinking() {
+      const div = document.createElement('div');
+      div.className = 'msg thinking';
+      div.id = 'thinking-msg';
+      div.innerHTML = '<div class="pulse"></div> Scanning your situation against the Blueprint…';
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    function removeThinking() {
+      const t = document.getElementById('thinking-msg');
+      if (t) t.remove();
+    }
+
+    async function send() {
+      const text = inputEl.value.trim();
+      if (!text) return;
+      inputEl.value = '';
+      inputEl.style.height = 'auto';
+      sendBtn.disabled = true;
+
+      addMessage(text, 'user');
+      conversationHistory.push({ role: 'user', content: text });
+      addThinking();
+
+      try {
+        const resp = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId, history: conversationHistory })
+        });
+        const data = await resp.json();
+        removeThinking();
+
+        if (data.error) {
+          addMessage('[Error: ' + data.error + ']', 'agent');
+          sendBtn.disabled = false;
+          return;
+        }
+
+        const reply = data.reply || '';
+        const turn = data.turn || conversationHistory.length;
+        conversationHistory.push({ role: 'assistant', content: reply });
+        addMessage(reply, 'agent');
+        turnCounter.textContent = `Turn ${Math.ceil(turn / 2) + 1} of ~7`;
+
+        if (data.artifact_update) updateArtifact(data.artifact_update);
+        if (data.final) {
+          inputEl.placeholder = 'Conversation complete — capture your email above or book a call';
+          inputEl.disabled = true;
+          sendBtn.disabled = true;
+          showCTA();
+        } else {
+          sendBtn.disabled = false;
+          inputEl.focus();
+        }
+      } catch (err) {
+        removeThinking();
+        addMessage('[Network error: ' + err.message + ']', 'agent');
+        sendBtn.disabled = false;
+      }
+    }
+
+    function showArtifact() {
+      artifactEmpty.style.display = 'none';
+      artifactContent.style.display = 'block';
+    }
+
+    function showCTA() {
+      document.getElementById('cta-section').style.display = 'block';
+    }
+
+    function updateArtifact(update) {
+      Object.assign(artifactState, update);
+      const hasAny = Object.keys(artifactState).length > 0;
+      if (hasAny) showArtifact();
+
+      // Situation
+      if (update.situation_summary !== undefined) {
+        document.getElementById('situation-section').style.display = 'block';
+        document.getElementById('situation-summary').textContent = update.situation_summary;
+      }
+      if (update.industry || update.region || update.size || update.role) {
+        document.getElementById('situation-section').style.display = 'block';
+        const meta = [
+          { k: 'Industry', v: artifactState.industry },
+          { k: 'Region', v: artifactState.region },
+          { k: 'Size', v: artifactState.size },
+          { k: 'Role', v: artifactState.role }
+        ].filter(x => x.v);
+        document.getElementById('meta-grid').innerHTML = meta.map(x => `<div><span class="key">${x.k}:</span><span>${x.v}</span></div>`).join('');
+      }
+
+      // Scores
+      if (update.scores) {
+        document.getElementById('scores-section').style.display = 'block';
+        renderRadar(update.scores, update.gap_dimensions || []);
+        renderScoresList(update.scores, update.gap_dimensions || []);
+      }
+
+      // Recommendation
+      if (update.recommendation) {
+        document.getElementById('rec-section').style.display = 'block';
+        document.getElementById('rec-title').textContent = update.recommendation.title || '';
+        document.getElementById('rec-duration').textContent = update.recommendation.duration || '';
+        document.getElementById('rec-why').textContent = update.recommendation.why || '';
+      }
+
+      // Consultant
+      if (update.consultant) {
+        document.getElementById('consultant-section').style.display = 'block';
+        const c = update.consultant;
+        document.getElementById('consultant-initials').textContent = (c.name || '??').split(' ').map(s => s[0]).slice(0,2).join('').toUpperCase();
+        document.getElementById('consultant-name').textContent = c.name || '';
+        document.getElementById('consultant-role').textContent = c.role || '';
+        document.getElementById('consultant-note').textContent = c.note || '';
+      }
+    }
+
+    function renderRadar(scores, gapDims) {
+      const labels = Object.keys(scores);
+      const data = labels.map(l => scores[l]);
+      const ctx = document.getElementById('radar-chart').getContext('2d');
+      if (radarChart) {
+        radarChart.data.labels = labels;
+        radarChart.data.datasets[0].data = data;
+        radarChart.update();
+        return;
+      }
+      radarChart = new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Your maturity',
+            data,
+            backgroundColor: 'rgba(0, 110, 255, 0.18)',
+            borderColor: '#006EFF',
+            borderWidth: 2,
+            pointBackgroundColor: '#00375A',
+            pointBorderColor: '#fff',
+            pointRadius: 4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            r: {
+              min: 0,
+              max: 5,
+              ticks: { stepSize: 1, color: '#6B7280', font: { size: 10 } },
+              pointLabels: { font: { family: 'Be Vietnam Pro', size: 11, weight: '500' }, color: '#1F2937' },
+              grid: { color: '#E6E8EC' },
+              angleLines: { color: '#E6E8EC' }
+            }
+          }
+        }
+      });
+    }
+
+    function renderScoresList(scores, gapDims) {
+      const list = document.getElementById('scores-list');
+      list.innerHTML = Object.entries(scores).map(([dim, score]) => {
+        const isGap = gapDims.includes(dim);
+        return `
+          <div class="dim ${isGap ? 'gap' : ''}">${dim}${isGap ? ' <span class="gap-marker">← largest gap</span>' : ''}</div>
+          <div>${score.toFixed(1)} / 5</div>
+        `;
+      }).join('');
+    }
+
+    // Email capture
+    document.getElementById('email-btn').addEventListener('click', async () => {
+      const email = document.getElementById('email-input').value.trim();
+      if (!email || !email.includes('@')) {
+        document.getElementById('email-status').textContent = 'Please enter a valid email.';
+        document.getElementById('email-status').style.display = 'block';
+        document.getElementById('email-status').style.color = '#EF4444';
+        return;
+      }
+      try {
+        await fetch('/api/lead', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId, email, conversation: conversationHistory, artifact: artifactState })
+        });
+        document.getElementById('email-status').textContent = '✓ Sent. We will email you the diagnosis and a calendar link.';
+        document.getElementById('email-status').style.display = 'block';
+        document.getElementById('email-status').style.color = '#64FA8C';
+      } catch (err) {
+        document.getElementById('email-status').textContent = 'Could not send — try again.';
+        document.getElementById('email-status').style.display = 'block';
+        document.getElementById('email-status').style.color = '#EF4444';
+      }
+    });
+
+    document.getElementById('book-btn').addEventListener('click', () => {
+      alert('[Demo] In production, this opens a calendar booking with your matched consultant.');
+    });
+
+    inputEl.focus();
+  </script>
+</body>
+</html>
