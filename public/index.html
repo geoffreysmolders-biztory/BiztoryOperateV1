@@ -681,8 +681,11 @@
     }
 
     function renderRadar(scores, gapDims) {
-      const labels = Object.keys(scores);
-      const data = labels.map(l => scores[l]);
+      // Defensive: agent may emit partial scores mid-conversation (some dimensions null)
+      const validEntries = Object.entries(scores).filter(([_, v]) => typeof v === 'number' && !isNaN(v));
+      if (validEntries.length === 0) return;
+      const labels = validEntries.map(([k]) => k);
+      const data = validEntries.map(([_, v]) => v);
       const ctx = document.getElementById('radar-chart').getContext('2d');
       if (radarChart) {
         radarChart.data.labels = labels;
@@ -727,9 +730,11 @@
       const list = document.getElementById('scores-list');
       list.innerHTML = Object.entries(scores).map(([dim, score]) => {
         const isGap = gapDims.includes(dim);
+        const isNumeric = typeof score === 'number' && !isNaN(score);
+        const scoreDisplay = isNumeric ? `${score.toFixed(1)} / 5` : '<span style="color:#9CA3AF;">scoring…</span>';
         return `
           <div class="dim ${isGap ? 'gap' : ''}">${dim}${isGap ? ' <span class="gap-marker">← largest gap</span>' : ''}</div>
-          <div>${score.toFixed(1)} / 5</div>
+          <div>${scoreDisplay}</div>
         `;
       }).join('');
     }
