@@ -410,6 +410,24 @@
     .note-hypothesis  { border-left-color: #D1D5DB; }
     .note-risk        { border-left-color: #F59E0B; }
     .note-locked      { border-left-color: var(--lime); background: rgba(100,250,140,0.05); }
+
+    /* Collapsible notebook (after diagnosis is final) */
+    .notebook-header.collapsible {
+      cursor: pointer;
+      user-select: none;
+      padding: 4px 0;
+      transition: opacity 0.15s;
+    }
+    .notebook-header.collapsible:hover { opacity: 0.75; }
+    .notebook-toggle {
+      font-size: 10px;
+      color: var(--muted);
+      margin-left: auto;
+      font-weight: 500;
+      text-transform: none;
+      letter-spacing: 0;
+    }
+    .notebook.collapsed { display: none; }
     .artifact-title {
       font-size: 22px;
       font-weight: 700;
@@ -588,7 +606,7 @@
     <div class="conv-panel">
       <div class="conv-header">
         <div class="dot"></div>
-        <div class="title">Blueprint Gap Scanner</div>
+        <div class="title" id="skill-title">Biztory Concierge</div>
         <div class="meta" id="turn-counter">Turn 1 of ~7</div>
       </div>
       <div class="conv-messages" id="messages">
@@ -596,11 +614,11 @@
         <div class="pills-wrap" id="pills-wrap">
           <div class="pills-label">Pick an angle or type your own answer below</div>
           <div class="pills">
-            <button class="pill" data-pill="I'm stuck on Tableau and looking for what's next.">Stuck on Tableau — what's next?</button>
-            <button class="pill" data-pill="We want to start with AI agents — where do we begin?">Want to start with AI agents</button>
-            <button class="pill" data-pill="Our data is fine but adoption is poor.">Data is fine but adoption is poor</button>
-            <button class="pill" data-pill="We need to industrialise our data operations.">Industrialise our data ops</button>
-            <button class="pill" data-pill="I'm just exploring — show me what Biztory does.">Just exploring — what do you do?</button>
+            <button class="pill" data-pill="I'm stuck on Tableau and looking for what's next." data-skill="gap-scanner">Stuck on Tableau — what's next?</button>
+            <button class="pill" data-pill="We want to start with AI agents — where do we begin?" data-skill="ai-readiness-scan">Want to start with AI agents</button>
+            <button class="pill" data-pill="Our data is fine but adoption is poor." data-skill="gap-scanner">Data is fine but adoption is poor</button>
+            <button class="pill" data-pill="We need to industrialise our data operations." data-skill="digital-workforce-scoping">Industrialise our data ops</button>
+            <button class="pill" data-pill="I'm just exploring — show me what Biztory does." data-skill="methodology-walker">Just exploring — what do you do?</button>
           </div>
         </div>
       </div>
@@ -632,8 +650,8 @@
         </div>
 
         <div class="section" id="notebook-section" style="display:none;">
-          <div class="artifact-label">
-            Live diagnostic
+          <div class="artifact-label notebook-header" id="notebook-header">
+            <span id="notebook-header-label">Live diagnostic</span>
             <span class="scanning-dot" id="scanning-dot">● scanning</span>
           </div>
           <div class="notebook" id="notebook"></div>
@@ -686,7 +704,7 @@
   </main>
 
   <footer>
-    Biztory · Blueprint Gap Scanner · v0 demo · Powered by Claude
+    Biztory · Concierge v0.5 · Powered by Claude
   </footer>
 
   <script>
@@ -694,6 +712,21 @@
     let conversationHistory = [];
     let radarChart = null;
     let artifactState = {};
+    let currentSkill = null;   // null until pill clicked or coordinator routes
+
+    // Display names for each sub-skill (matches /api/skills response)
+    const SKILL_DISPLAY = {
+      'gap-scanner':              'Blueprint Gap Scanner',
+      'methodology-walker':       'Biztory Methodology Walker',
+      'ai-readiness-scan':        'AI Readiness Scan',
+      'digital-workforce-scoping':'Digital Workforce Scoping',
+    };
+
+    function setSkill(name) {
+      currentSkill = name;
+      const titleEl = document.getElementById('skill-title');
+      if (titleEl) titleEl.textContent = SKILL_DISPLAY[name] || 'Biztory Concierge';
+    }
 
     const messagesEl = document.getElementById('messages');
     const inputEl = document.getElementById('user-input');
@@ -717,12 +750,14 @@
 
     sendBtn.addEventListener('click', send);
 
-    // Angle pills — click to auto-send the mapped starter message
+    // Angle pills — click sets the skill from data-skill, then auto-sends the message
     document.querySelectorAll('.pill').forEach(btn => {
       btn.addEventListener('click', () => {
         const text = btn.getAttribute('data-pill');
+        const skill = btn.getAttribute('data-skill');
         const pillsWrap = document.getElementById('pills-wrap');
         if (pillsWrap) pillsWrap.style.display = 'none';
+        if (skill) setSkill(skill);
         inputEl.value = text;
         send();
       });
@@ -761,11 +796,35 @@
       conversationHistory.push({ role: 'user', content: text });
       addThinking();
 
+      // First-turn free-text: ask the Haiku coordinator to pick a sub-skill
+      if (currentSkill === null && conversationHistory.length === 1) {
+        // Hide pills if visitor typed before clicking (so we don't show stale options)
+        const pillsWrap = document.getElementById('pills-wrap');
+        if (pillsWrap) pillsWrap.style.display = 'none';
+        try {
+          const routeResp = await fetch('/api/route-intent', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text })
+          });
+          const route = await routeResp.json();
+          if (route && route.skill) {
+            setSkill(route.skill);
+            console.log(`[coordinator] routed to ${route.skill} (${route.confidence}) — ${route.rationale}`);
+          } else {
+            setSkill('gap-scanner');
+          }
+        } catch (err) {
+          console.warn('coordinator failed, defaulting to gap-scanner:', err.message);
+          setSkill('gap-scanner');
+        }
+      }
+
       try {
         const resp = await fetch('/api/chat', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId, history: conversationHistory })
+          body: JSON.stringify({ sessionId, history: conversationHistory, skill: currentSkill })
         });
         const data = await resp.json();
         removeThinking();
@@ -813,6 +872,31 @@
         dot.style.color = 'var(--lime)';
         dot.style.animation = 'none';
       }
+      // Collapse the live notebook to a one-line toggle — diagnosis is the focus now
+      collapseNotebook();
+    }
+
+    function collapseNotebook() {
+      const notebook = document.getElementById('notebook');
+      const header = document.getElementById('notebook-header');
+      const label = document.getElementById('notebook-header-label');
+      if (!notebook || !header || !label) return;
+      const count = notebook.children.length;
+      if (count === 0) return;
+
+      // Hide entries by default
+      notebook.classList.add('collapsed');
+
+      // Make header clickable with toggle affordance
+      header.classList.add('collapsible');
+      label.innerHTML = `▾ View diagnostic trail <span class="notebook-toggle">${count} note${count === 1 ? '' : 's'}</span>`;
+
+      header.addEventListener('click', () => {
+        const isCollapsed = notebook.classList.toggle('collapsed');
+        label.innerHTML = isCollapsed
+          ? `▾ View diagnostic trail <span class="notebook-toggle">${count} note${count === 1 ? '' : 's'}</span>`
+          : `▴ Hide diagnostic trail <span class="notebook-toggle">${count} note${count === 1 ? '' : 's'}</span>`;
+      });
     }
 
     // Icon map for live notebook entries
@@ -1003,7 +1087,7 @@
         await fetch('/api/lead', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ sessionId, email, conversation: conversationHistory, artifact: artifactState })
+          body: JSON.stringify({ sessionId, email, skill: currentSkill, conversation: conversationHistory, artifact: artifactState })
         });
         document.getElementById('email-status').textContent = '✓ Sent. We will email you the diagnosis and a calendar link.';
         document.getElementById('email-status').style.display = 'block';
