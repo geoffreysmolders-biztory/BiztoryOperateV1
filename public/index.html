@@ -203,6 +203,48 @@
       0%, 100% { opacity: 0.3; transform: scale(0.8); }
       50% { opacity: 1; transform: scale(1.2); }
     }
+
+    /* Angle pills */
+    .pills-wrap {
+      align-self: flex-start;
+      max-width: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .pills-label {
+      font-size: 12px;
+      color: var(--muted);
+      font-weight: 500;
+      margin-top: 2px;
+    }
+    .pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .pill {
+      background: white;
+      border: 1px solid var(--border);
+      color: var(--navy);
+      padding: 9px 14px;
+      border-radius: 24px;
+      font-family: inherit;
+      font-size: 13.5px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.15s;
+      line-height: 1.2;
+    }
+    .pill:hover {
+      border-color: var(--blue);
+      background: rgba(0, 110, 255, 0.04);
+      color: var(--blue);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(0, 110, 255, 0.12);
+    }
+    .pill:active { transform: translateY(0); }
+
     .conv-input {
       padding: 16px 24px;
       border-top: 1px solid var(--border);
@@ -455,7 +497,17 @@
         <div class="meta" id="turn-counter">Turn 1 of ~7</div>
       </div>
       <div class="conv-messages" id="messages">
-        <div class="msg agent">Tell me about your data situation in one or two sentences. I'll scan it against the Biztory Blueprint and recommend where to start.</div>
+        <div class="msg agent">What brings you to Biztory today?</div>
+        <div class="pills-wrap" id="pills-wrap">
+          <div class="pills-label">Pick an angle or type your own answer below</div>
+          <div class="pills">
+            <button class="pill" data-pill="I'm stuck on Tableau and looking for what's next.">Stuck on Tableau — what's next?</button>
+            <button class="pill" data-pill="We want to start with AI agents — where do we begin?">Want to start with AI agents</button>
+            <button class="pill" data-pill="Our data is fine but adoption is poor.">Data is fine but adoption is poor</button>
+            <button class="pill" data-pill="We need to industrialise our data operations.">Industrialise our data ops</button>
+            <button class="pill" data-pill="I'm just exploring — show me what Biztory does.">Just exploring — what do you do?</button>
+          </div>
+        </div>
       </div>
       <div class="conv-input">
         <textarea id="user-input" placeholder="Type your answer..." rows="1"></textarea>
@@ -552,6 +604,17 @@
     });
 
     sendBtn.addEventListener('click', send);
+
+    // Angle pills — click to auto-send the mapped starter message
+    document.querySelectorAll('.pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const text = btn.getAttribute('data-pill');
+        const pillsWrap = document.getElementById('pills-wrap');
+        if (pillsWrap) pillsWrap.style.display = 'none';
+        inputEl.value = text;
+        send();
+      });
+    });
 
     function addMessage(text, role) {
       const div = document.createElement('div');
